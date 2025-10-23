@@ -1,1 +1,2 @@
-# waveosv2
+# WaveOS V2
+# (c) Copyright CodeEngineX2012
