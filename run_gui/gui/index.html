@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WaveOS V2 Mini OS GUI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: white;
+      overflow: hidden;
+    }
+
+    /* ===== LOGIN ===== */
+    #login-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg,#003f8a,#002a5a); /* dark blue */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      flex-direction: column;
+    }
+
+    .login-box {
+      background: rgba(0,0,0,0.45);
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+      min-width: 320px;
+    }
+
+    .login-box h2 {
+      margin: 0 0 12px 0;
+      text-align: center;
+    }
+
+    .login-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    select, input[type="password"] {
+      flex: 1;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #0f2540;
+      color: white;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      background: #0078ff;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .btn:active { transform: translateY(1px); }
+
+    .login-hint { font-size: 12px; color: #cfe4ff; margin-top: 8px; text-align:center; }
+
+    /* ===== Boot Screen ===== */
+    #boot-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0056b3; /* Blue loading screen */
+      display: none; /* shown after successful login */
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 1s ease-in-out;
+    }
+
+    #boot-screen img {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 20px;
+      animation: waveIconPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes waveIconPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.9; }
+    }
+
+    .loader {
+      border: 6px solid #cfe4ff;
+      border-top: 6px solid white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Welcome message after boot */
+    #welcome-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: white;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 20px 40px;
+      border-radius: 10px;
+      z-index: 9998;
+      display: none;
+      text-align: center;
+    }
+
+    /* ===== Desktop & Apps ===== */
+    #desktop {
+      display: none;
+      background: #0056b3; /* Blue theme during desktop */
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Taskbar */
+    #taskbar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      height: 40px;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      box-sizing: border-box;
+      z-index: 900;
+    }
+
+    #taskbar-left {
+      display: flex;
+      align-items: center;
+    }
+
+    #wave-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    #clock {
+      font-size: 14px;
+    }
+
+    /* Desktop icons */
+    .icon {
+      width: 80px;
+      text-align: center;
+      margin: 20px;
+      cursor: pointer;
+      display: inline-block;
+      transition: transform 0.2s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .icon img {
+      width: 64px;
+      height: 64px;
+    }
+
+    .icon:hover {
+      transform: scale(1.05);
+    }
+
+    /* Windows */
+    .window {
+      position: absolute;
+      top: 100px;
+      left: 100px;
+      width: 520px;
+      height: 420px;
+      background: #2c2c2c;
+      border: 2px solid #555;
+      display: none;
+      flex-direction: column;
+      color: white;
+      z-index: 100;
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .window-header {
+      background: linear-gradient(90deg,#444,#3a3a3a);
+      padding: 8px;
+      cursor: move;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .window-body {
+      flex: 1;
+      padding: 12px;
+      overflow: auto;
+      background: #1f1f1f;
+    }
+
+    button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      cursor: pointer;
+      margin-right: 6px;
+      border-radius: 4px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 90%;
+      background: #151515;
+      color: white;
+      border: 1px solid #444;
+      resize: none;
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    canvas {
+      background: white;
+      border: 1px solid #555;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    /* File Explorer */
+    #fileList {
+      background: #111;
+      border: 1px solid #444;
+      color: white;
+      padding: 6px;
+      height: 70%;
+      overflow-y: auto;
+      border-radius: 4px;
+    }
+
+    /* Calculator */
+    #calcDisplay {
+      width: 100%;
+      height: 50px;
+      background: #111;
+      color: white;
+      border: 1px solid #444;
+      font-size: 22px;
+      padding: 6px;
+      text-align: right;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .calc-btn {
+      width: 22%;
+      padding: 10px;
+      margin: 1%;
+      font-size: 18px;
+      background: #333;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    /* Terminal */
+    #terminalOutput {
+      height: 72%;
+      background: #000;
+      color: #0f0;
+      padding: 6px;
+      overflow-y: auto;
+      font-family: monospace;
+      border: 1px solid #444;
+      border-radius: 4px;
+    }
+
+    #terminalInput {
+      width: 100%;
+      background: #0a0a0a;
+      color: #0f0;
+      border: none;
+      padding: 8px;
+      font-family: monospace;
+      outline: none;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin-top: 8px;
+    }
+
+    /* Task Manager */
+    #taskManagerList {
+      background: #111;
+      border: 1px solid #444;
+      color: white;
+      padding: 10px;
+      height: 78%;
+      overflow-y: auto;
+      border-radius: 4px;
+    }
+
+    /* Context Menu */
+    #contextMenu {
+      position: absolute;
+      display: none;
+      background: #222;
+      border: 1px solid #444;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 1000;
+      border-radius: 4px;
+      min-width: 160px;
+    }
+
+    #contextMenu div {
+      padding: 10px 12px;
+      cursor: pointer;
+      color: white;
+      font-size: 14px;
+    }
+
+    #contextMenu div:hover {
+      background: #333;
+    }
+
+    /* small responsive tweak */
+    @media (max-width: 600px) {
+      .window { width: 90%; height: 60%; left: 5%; top: 10%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>WaveOS V2 Login</h2>
+
+      <div class="login-row">
+        <select id="userSelect">
+          <option value="admin">admin</option>
+          <option value="usr">usr</option>
+        </select>
+        <input type="password" id="passwordInput" placeholder="Password" />
+        <button class="btn" onclick="attemptLogin()">Login</button>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button class="btn" onclick="fillAdmin()">Quick Fill Admin</button>
+        <button class="btn" onclick="fillUsr()">Quick Fill User</button>
+      </div>
+
+      <div class="login-hint">Users: admin (password: !@#$%), usr (password: sudoaptinstallhydra)</div>
+    </div>
+  </div>
+
+  <!-- BOOT SCREEN -->
+  <div id="boot-screen">
+    <img src="assets/wave.jpg" alt="Wave Logo">
+    <div class="loader" aria-hidden="true"></div>
+  </div>
+
+  <!-- WELCOME MESSAGE -->
+  <div id="welcome-message">Welcome To WaveOS V2 by CodeEngineX</div>
+
+  <!-- DESKTOP -->
+  <div id="desktop">
+    <!-- Desktop Icons -->
+    <div class="icon" onclick="openWindow('notesWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/edit.png" alt="notes"/>
+      <div>Notes</div>
+    </div>
+    <div class="icon" onclick="openWindow('paintWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/paint-brush.png" alt="paint"/>
+      <div>Paint</div>
+    </div>
+    <div class="icon" onclick="openWindow('fileWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/folder-invoices.png" alt="files"/>
+      <div>Files</div>
+    </div>
+    <div class="icon" onclick="openWindow('calcWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/calculator.png" alt="calc"/>
+      <div>Calculator</div>
+    </div>
+    <div class="icon" onclick="openWindow('terminalWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/console.png" alt="term"/>
+      <div>Terminal</div>
+    </div>
+    <div class="icon" onclick="openWindow('taskManagerWindow')">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/task.png" alt="task"/>
+      <div>Task Manager</div>
+    </div>
+    <div class="icon" onclick="openHelp()">
+      <img src="https://img.icons8.com/ios-filled/50/ffffff/help.png" alt="help"/>
+      <div>Help</div>
+    </div>
+
+    <!-- Notes Window -->
+    <div class="window" id="notesWindow">
+      <div class="window-header">
+        Notes App
+        <div>
+          <button onclick="saveNotes()">Save</button>
+          <button onclick="closeWindow('notesWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <textarea id="notesArea" placeholder="Type your notes here..."></textarea>
+      </div>
+    </div>
+
+    <!-- Paint Window -->
+    <div class="window" id="paintWindow">
+      <div class="window-header">
+        Paint App
+        <div>
+          <button onclick="clearCanvas()">Clear</button>
+          <button onclick="closeWindow('paintWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <canvas id="paintCanvas" width="480" height="320"></canvas>
+      </div>
+    </div>
+
+    <!-- File Explorer Window -->
+    <div class="window" id="fileWindow">
+      <div class="window-header">
+        File Explorer
+        <div>
+          <button onclick="createFile()">New</button>
+          <button onclick="closeWindow('fileWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div id="fileList"></div>
+      </div>
+    </div>
+
+    <!-- Calculator Window -->
+    <div class="window" id="calcWindow">
+      <div class="window-header">
+        Calculator
+        <div>
+          <button onclick="clearCalc()">C</button>
+          <button onclick="closeWindow('calcWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <input type="text" id="calcDisplay" disabled />
+        <div style="display:flex;flex-wrap:wrap;margin-top:8px;">
+          <button class="calc-btn" onclick="pressCalc('7')">7</button>
+          <button class="calc-btn" onclick="pressCalc('8')">8</button>
+          <button class="calc-btn" onclick="pressCalc('9')">9</button>
+          <button class="calc-btn" onclick="pressCalc('/')">/</button>
+
+          <button class="calc-btn" onclick="pressCalc('4')">4</button>
+          <button class="calc-btn" onclick="pressCalc('5')">5</button>
+          <button class="calc-btn" onclick="pressCalc('6')">6</button>
+          <button class="calc-btn" onclick="pressCalc('*')">*</button>
+
+          <button class="calc-btn" onclick="pressCalc('1')">1</button>
+          <button class="calc-btn" onclick="pressCalc('2')">2</button>
+          <button class="calc-btn" onclick="pressCalc('3')">3</button>
+          <button class="calc-btn" onclick="pressCalc('-')">-</button>
+
+          <button class="calc-btn" onclick="pressCalc('0')">0</button>
+          <button class="calc-btn" onclick="pressCalc('.')">.</button>
+          <button class="calc-btn" onclick="calculate()">=</button>
+          <button class="calc-btn" onclick="pressCalc('+')">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal Window -->
+    <div class="window" id="terminalWindow">
+      <div class="window-header">
+        Terminal
+        <div>
+          <button onclick="closeWindow('terminalWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div id="terminalOutput"></div>
+        <input id="terminalInput" placeholder="Type command here..." onkeydown="terminalCommand(event)">
+      </div>
+    </div>
+
+    <!-- Task Manager Window -->
+    <div class="window" id="taskManagerWindow">
+      <div class="window-header">
+        Task Manager
+        <div>
+          <button onclick="closeWindow('taskManagerWindow')">X</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div id="taskManagerList"></div>
+      </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div id="taskbar">
+      <div id="taskbar-left">
+        <img id="wave-icon" src="assests/wave.jpg" title="WaveOS">
+        <span id="taskbar-user">WaveOS V2</span>
+      </div>
+      <div id="clock"></div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="contextMenu">
+    <div onclick="createFile()">Create File</div>
+    <div onclick="location.reload()">Refresh (will show boot)</div>
+    <div onclick="alert('WaveOS Mini - Version 2.0\\nDeveloped by CodeEngineX')">Properties</div>
+  </div>
+
+  <script>
+    /*********************
+     * Credentials (hard-coded for demo)
+     * - admin : !@#$%
+     * - usr   : sudoaptinstallhydra
+     *********************/
+    const credentials = {
+      admin: "!@#$%",
+      usr: "sudoaptinstallhydra"
+    };
+
+    // Elements
+    const loginScreen = document.getElementById('login-screen');
+    const bootScreen = document.getElementById('boot-screen');
+    const welcomeMessage = document.getElementById('welcome-message');
+    const desktop = document.getElementById('desktop');
+    const userSelect = document.getElementById('userSelect');
+    const passwordInput = document.getElementById('passwordInput');
+    const taskbarUser = document.getElementById('taskbar-user');
+
+    // Boot timing (ms)
+    const BOOT_DURATION = 10000; // 10s
+    const WELCOME_DURATION = 3000; // 3s
+
+    // login helpers
+    function fillAdmin() { userSelect.value = 'admin'; passwordInput.value = credentials.admin; }
+    function fillUsr() { userSelect.value = 'usr'; passwordInput.value = credentials.usr; }
+
+    function attemptLogin() {
+      const user = userSelect.value;
+      const pass = passwordInput.value || "";
+      if (credentials[user] && pass === credentials[user]) {
+        // Success: hide login, show boot sequence
+        loginScreen.style.display = 'none';
+        startBootSequence(user);
+      } else {
+        alert("Login failed — incorrect password.");
+        passwordInput.value = "";
+        passwordInput.focus();
+      }
+    }
+
+    // Boot sequence: show boot screen -> welcome -> desktop
+    function startBootSequence(user) {
+      // set logged in user on taskbar
+      taskbarUser.textContent = user === 'admin' ? 'admin — WaveOS V2' : 'usr — WaveOS V2';
+
+      // show boot screen
+      bootScreen.style.display = 'flex';
+      // ensure desktop hidden
+      desktop.style.display = 'none';
+
+      // After BOOT_DURATION: flash black + welcome, then show desktop
+      setTimeout(() => {
+        // hide boot screen and briefly show welcome on black
+        bootScreen.style.display = 'none';
+        document.body.style.background = 'black';
+        welcomeMessage.style.display = 'block';
+
+        setTimeout(() => {
+          welcomeMessage.style.display = 'none';
+          // show desktop (blue theme)
+          document.body.style.background = '';
+          desktop.style.display = 'block';
+          document.getElementById('desktop').style.background = '#0056b3';
+          // load persistent content
+          loadNotes();
+          renderFiles();
+          updateClock();
+        }, WELCOME_DURATION);
+      }, BOOT_DURATION);
+    }
+
+    // Wire login Enter key
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') attemptLogin();
+    });
+
+    /*********************
+     * WINDOW MANAGEMENT
+     *********************/
+    let windows = document.querySelectorAll('.window');
+    let zIndexCounter = 100;
+
+    function openWindow(id) {
+      const win = document.getElementById(id);
+      win.style.display = 'flex';
+      bringToFront(win);
+      updateTaskManager();
+    }
+
+    function closeWindow(id) {
+      document.getElementById(id).style.display = 'none';
+      updateTaskManager();
+    }
+
+    function bringToFront(win) {
+      zIndexCounter++;
+      win.style.zIndex = zIndexCounter;
+    }
+
+    windows.forEach(win => {
+      const header = win.querySelector('.window-header');
+      let offsetX = 0, offsetY = 0, isDown = false;
+
+      header.addEventListener('mousedown', e => {
+        isDown = true;
+        offsetX = e.clientX - win.offsetLeft;
+        offsetY = e.clientY - win.offsetTop;
+        bringToFront(win);
+      });
+
+      document.addEventListener('mouseup', () => isDown = false);
+      document.addEventListener('mousemove', e => {
+        if (!isDown) return;
+        win.style.left = (e.clientX - offsetX) + 'px';
+        win.style.top = (e.clientY - offsetY) + 'px';
+      });
+    });
+
+    /*********************
+     * NOTES (persistent)
+     *********************/
+    function saveNotes() {
+      localStorage.setItem('waveos_notes', document.getElementById("notesArea").value);
+      alert("Notes saved!");
+    }
+
+    function loadNotes() {
+      document.getElementById("notesArea").value = localStorage.getItem('waveos_notes') || "";
+    }
+
+    /*********************
+     * PAINT
+     *********************/
+    const canvas = document.getElementById("paintCanvas");
+    const ctx = canvas.getContext("2d");
+    let painting = false;
+
+    canvas.addEventListener('mousedown', () => painting = true);
+    canvas.addEventListener('mouseup', () => painting = false);
+    canvas.addEventListener('mouseleave', () => painting = false);
+    canvas.addEventListener('mousemove', draw);
+
+    function draw(e) {
+      if (!painting) return;
+      const rect = canvas.getBoundingClientRect();
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+      ctx.arc(e.clientX - rect.left, e.clientY - rect.top, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    /*********************
+     * FILE EXPLORER (persistent)
+     *********************/
+    let files = JSON.parse(localStorage.getItem('waveos_files')) || ["file1.txt", "notes.txt"];
+
+    function renderFiles() {
+      const list = document.getElementById("fileList");
+      if (!list) return;
+      list.innerHTML = files.map(file => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #222">
+          <span style="flex:1">${file}</span>
+          <span style="display:flex;gap:6px">
+            <button onclick="openFile('${escape(file)}')">Open</button>
+            <button onclick="deleteFile('${escape(file)}')">Delete</button>
+          </span>
+        </div>`).join('');
+    }
+
+    function createFile() {
+      const name = prompt("Enter new file name:");
+      if (name) {
+        files.push(name);
+        localStorage.setItem('waveos_files', JSON.stringify(files));
+        renderFiles();
+      }
+    }
+
+    function deleteFile(fileEscaped) {
+      const name = unescape(fileEscaped);
+      if (!confirm(`Delete "${name}"?`)) return;
+      files = files.filter(f => f !== name);
+      localStorage.setItem('waveos_files', JSON.stringify(files));
+      renderFiles();
+    }
+
+    function openFile(fileEscaped) {
+      const name = unescape(fileEscaped);
+      // open text files in notes app; other types show preview alert
+      if (name.toLowerCase().endsWith('.txt') || name.toLowerCase().endsWith('.md')) {
+        openWindow('notesWindow');
+        // load file contents if stored individually (simple map in localStorage)
+        const stored = JSON.parse(localStorage.getItem('waveos_file_contents') || '{}');
+        document.getElementById('notesArea').value = stored[name] || `-- ${name} (new) --`;
+      } else {
+        alert(`Preview not available for ${name}.`);
+      }
+    }
+
+    /*********************
+     * CALCULATOR
+     *********************/
+    let calcExpression = "";
+    function pressCalc(val) {
+      calcExpression += val;
+      document.getElementById('calcDisplay').value = calcExpression;
+    }
+    function calculate() {
+      try {
+        calcExpression = eval(calcExpression).toString();
+      } catch {
+        calcExpression = "Error";
+      }
+      document.getElementById('calcDisplay').value = calcExpression;
+    }
+    function clearCalc() {
+      calcExpression = "";
+      document.getElementById('calcDisplay').value = "";
+    }
+
+    /*********************
+     * TERMINAL
+     *********************/
+    function terminalCommand(event) {
+      if (event.key === "Enter") {
+        const input = event.target.value.trim();
+        const output = document.getElementById("terminalOutput");
+        output.innerHTML += `<div>> ${escapeHtml(input)}</div>`;
+
+        if (input === "help") {
+          output.innerHTML += `<div>Commands: help, time, open paint, open notes, open files, open calc, clear</div>`;
+        } else if (input === "time") {
+          output.innerHTML += `<div>${new Date().toLocaleString()}</div>`;
+        } else if (input === "open paint") {
+          openWindow('paintWindow');
+          output.innerHTML += `<div>Opened Paint App</div>`;
+        } else if (input === "open notes") {
+          openWindow('notesWindow');
+          output.innerHTML += `<div>Opened Notes App</div>`;
+        } else if (input === "open files") {
+          openWindow('fileWindow');
+          output.innerHTML += `<div>Opened File Explorer</div>`;
+        } else if (input === "open calc") {
+          openWindow('calcWindow');
+          output.innerHTML += `<div>Opened Calculator</div>`;
+        } else if (input === "clear") {
+          output.innerHTML = "";
+        } else {
+          output.innerHTML += `<div>Command not found</div>`;
+        }
+
+        event.target.value = "";
+        output.scrollTop = output.scrollHeight;
+      }
+    }
+
+    /*********************
+     * TASK MANAGER
+     *********************/
+    function updateTaskManager() {
+      const list = document.getElementById("taskManagerList");
+      if (!list) return;
+      list.innerHTML = "";
+      document.querySelectorAll('.window').forEach(win => {
+        if (win.style.display === 'flex') {
+          const id = win.id;
+          const name = id.replace(/Window$/i, '').replace(/([A-Z])/g, ' $1').trim();
+          list.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px;border-bottom:1px solid #222">
+            <span>${name}</span>
+            <button onclick="closeWindow('${id}')">Close</button>
+          </div>`;
+        }
+      });
+    }
+
+    /*********************
+     * CONTEXT MENU
+     *********************/
+    const contextMenu = document.getElementById('contextMenu');
+    document.addEventListener('contextmenu', function(event) {
+      // don't show on login or boot
+      if (loginScreen.style.display !== 'none') return;
+      event.preventDefault();
+      contextMenu.style.left = event.pageX + "px";
+      contextMenu.style.top = event.pageY + "px";
+      contextMenu.style.display = "block";
+    });
+    document.addEventListener('click', function() {
+      contextMenu.style.display = "none";
+    });
+
+    /*********************
+     * CLOCK
+     *********************/
+    function updateClock() {
+      const now = new Date();
+      const clockElem = document.getElementById('clock');
+      if (clockElem) clockElem.textContent = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    /*********************
+     * HELP
+     *********************/
+    function openHelp() {
+      window.open('https://codeenginex.wuaze.com', '_blank');
+    }
+
+    /*********************
+     * UTILITIES
+     *********************/
+    function escapeHtml(text) {
+      return (text + '').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+    }
+
+    // When refreshing from context menu (which reloads page), the login screen will show again.
+    // No auto-login for security demo.
+
+    // small safety: replace single quotes in file names passed into functions (escape used)
+    // initial render (if user somehow bypassed login, keep everything hidden until login)
+    document.getElementById('desktop').style.display = 'none';
+  </script>
+</body>
+</html>

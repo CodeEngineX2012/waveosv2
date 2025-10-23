@@ -1,0 +1,4 @@
+python.lib[eel]
+command.windows[pip install eel]
+command.linux[pip3 install eel]
+command.macOS[pip3 install eel]

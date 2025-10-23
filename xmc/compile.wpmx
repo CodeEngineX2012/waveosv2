@@ -1,0 +1,6 @@
+in {file_content?} (f="xmc", "fxmc"):
+ run {file_crnc}
+
+&& {
+ read.write(000)
+}

@@ -1,0 +1,13 @@
+def {$file_name$} main
+import xmpff.cmp
+
+in {xmpff.cmp} call func(000) {
+ user = "live"
+ password = "?null?"
+}
+
+&& {
+ set {
+  gui = False
+ }
+}
